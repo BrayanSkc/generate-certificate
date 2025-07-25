@@ -20,9 +20,7 @@ export async function POST(req: Request) {
     let browser: Awaited<ReturnType<typeof puppeteerCore.launch>>;
     if (isDev) {
       // Use full puppeteer locally
-      const puppeteer = await import('puppeteer');
-      //@ts-ignore
-      browser = await puppeteer.launch({ headless: 'new' });
+      browser = await puppeteerCore.launch({ headless: true });
     } else {
       // Vercel / serverless
       browser = await puppeteerCore.launch({
