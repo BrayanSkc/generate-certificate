@@ -1,103 +1,247 @@
-import Image from "next/image";
+"use client"
+
+import { useState } from 'react';
+import Head from 'next/head';
+import styles from './styles/home.module.css';
+
+const questions = [
+  {
+    id: 1,
+    question: "¿Cuánto es 2 + 2?",
+    options: ["3", "4", "5", "6"],
+    correct: 1
+  },
+  {
+    id: 2,
+    question: "¿Cuál es la capital de Colombia?",
+    options: ["Medellín", "Cali", "Bogotá", "Barranquilla"],
+    correct: 2
+  },
+  {
+    id: 3,
+    question: "¿Cuántos días tiene una semana?",
+    options: ["5", "6", "7", "8"],
+    correct: 2
+  },
+  {
+    id: 4,
+    question: "¿En qué año se fundó la Universidad del Atlántico?",
+    options: ["1941", "1946", "1950", "1955"],
+    correct: 1
+  },
+  {
+    id: 5,
+    question: "¿Cuál es el resultado de 10 × 3?",
+    options: ["25", "30", "35", "40"],
+    correct: 1
+  }
+];
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [showNameInput, setShowNameInput] = useState(true);
+  const [score, setScore] = useState(0);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleNameSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (userName.trim()) {
+      setShowNameInput(false);
+    }
+  };
+
+  const handleAnswer = (selectedOption: number) => {
+    const newAnswers = [...answers, selectedOption];
+    setAnswers(newAnswers);
+
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    } else {
+      // Calcular puntuación
+      const finalScore = newAnswers.reduce((acc, answer, index) => {
+        return questions[index].correct === answer ? acc + 1 : acc;
+      }, 0);
+
+      setScore(finalScore);
+      setShowResults(true);
+    }
+  };
+
+  const generateCertificate = async () => {
+    if (score < 3) {
+      alert('Necesitas al menos 3 respuestas correctas para obtener el certificado.');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+
+    try {
+      const response = await fetch('/api/certificate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: userName,
+          score: score,
+          totalQuestions: questions.length
+        }),
+      });
+      console.log("Pase por response: ", response)
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `certificado-${userName.replace(/\s+/g, '-')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        throw new Error('Error generando el certificado');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error generando el certificado. Inténtalo de nuevo.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const restartQuiz = () => {
+    setCurrentQuestion(0);
+    setAnswers([]);
+    setShowResults(false);
+    setUserName('');
+    setShowNameInput(true);
+    setScore(0);
+  };
+
+  if (showNameInput) {
+    return (
+      <div className={styles.container}>
+        <Head>
+          <title>Quiz de Inducción - ABIIDEA</title>
+          <meta name="description" content="Quiz de inducción para certificado" />
+        </Head>
+
+        <main className={styles.main}>
+          <div className={styles.nameForm}>
+            <h1 className={styles.title}>Quiz de Inducción</h1>
+            <p className={styles.subtitle}>ABIIDEA - Universidad del Atlántico</p>
+
+            <form onSubmit={handleNameSubmit} className={styles.form}>
+              <label htmlFor="userName" className={styles.label}>
+                Ingresa tu nombre completo:
+              </label>
+              <input
+                type="text"
+                id="userName"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                className={styles.input}
+                placeholder="Ej: María García López"
+                required
+              />
+              <button type="submit" className={styles.button}>
+                Comenzar Quiz
+              </button>
+            </form>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (showResults) {
+    return (
+      <div className={styles.container}>
+        <Head>
+          <title>Resultados - Quiz de Inducción</title>
+        </Head>
+
+        <main className={styles.main}>
+          <div className={styles.results}>
+            <h1 className={styles.title}>¡Quiz Completado!</h1>
+            <p className={styles.userName}>Hola, {userName}</p>
+
+            <div className={styles.scoreCard}>
+              <h2>Tu Puntuación</h2>
+              <div className={styles.score}>
+                {score} / {questions.length}
+              </div>
+              <p className={styles.percentage}>
+                {Math.round((score / questions.length) * 100)}% de aciertos
+              </p>
+            </div>
+
+            {score >= 3 ? (
+              <div className={styles.success}>
+                <p>¡Felicitaciones! Has aprobado el quiz.</p>
+                <button
+                  onClick={generateCertificate}
+                  disabled={isGeneratingPDF}
+                  className={styles.certificateButton}
+                >
+                  {isGeneratingPDF ? 'Generando...' : 'Descargar Certificado'}
+                </button>
+              </div>
+            ) : (
+              <div className={styles.failure}>
+                <p>Necesitas al menos 3 respuestas correctas para obtener el certificado.</p>
+              </div>
+            )}
+
+            <button onClick={restartQuiz} className={styles.restartButton}>
+              Reiniciar Quiz
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <Head>
+        <title>Quiz de Inducción - Pregunta {currentQuestion + 1}</title>
+      </Head>
+
+      <main className={styles.main}>
+        <div className={styles.quiz}>
+          <div className={styles.progress}>
+            <div
+              className={styles.progressBar}
+              style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
+            ></div>
+          </div>
+
+          <div className={styles.questionInfo}>
+            <span>Pregunta {currentQuestion + 1} de {questions.length}</span>
+            <span>Participante: {userName}</span>
+          </div>
+
+          <h2 className={styles.question}>
+            {questions[currentQuestion].question}
+          </h2>
+
+          <div className={styles.options}>
+            {questions[currentQuestion].options.map((option, index) => (
+              <button
+                key={index}
+                onClick={() => handleAnswer(index)}
+                className={styles.option}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
