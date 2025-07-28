@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import chromium from '@sparticuz/chromium';
-import puppeteerCore from 'puppeteer-core';
+import puppeteer from 'puppeteer-core';
 import { createCertificateHTML } from '@/utils/certificateTemplate';
 
 export const runtime = 'nodejs';
@@ -15,15 +15,24 @@ export async function POST(req: Request) {
     const html = createCertificateHTML(name);
 
     const isVercel = !!process.env.VERCEL && process.env.NODE_ENV === 'production';
+
+
     const isDev = process.env.NODE_ENV === 'development' && !isVercel;
 
-    let browser: Awaited<ReturnType<typeof puppeteerCore.launch>>;
+    const puppeteerLib = isDev ? await import('puppeteer') : await import('puppeteer-core');
+
+
+    let browser: Awaited<ReturnType<typeof puppeteer.launch>>;
     if (isDev) {
       // Use full puppeteer locally
-      browser = await puppeteerCore.launch({ headless: true });
+      const localChromiumPath = process.env.CHROMIUM_PATH || undefined;
+      browser = await puppeteer.launch({
+        headless: true,
+        executablePath: localChromiumPath, // Set this env variable to your local Chromium path
+      });
     } else {
       // Vercel / serverless
-      browser = await puppeteerCore.launch({
+      browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: { width: 1123, height: 794, deviceScaleFactor: 2 },
         executablePath: await chromium.executablePath(),
