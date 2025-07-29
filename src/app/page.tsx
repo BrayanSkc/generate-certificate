@@ -10,17 +10,6 @@ import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/user.store';
 
 
-
-
-
-const initialValuesFormData: InUserLoginProps = {
-  fname: "",
-  lname: "",
-  id: "",
-  phone: "",
-  email: ""
-};
-
 export default function Home() {
   const router = useRouter();
   const {
@@ -78,7 +67,9 @@ export default function Home() {
     if (!isLastQuestion()) {
       nextQuestion();
     } else {
+      nextQuestion();
       await sendResultsToGoogleSheet()
+      return
       setShowResults(true)
       goToCertificate()
 
@@ -100,14 +91,15 @@ export default function Home() {
       setIsLoading(true)
       const secret = process.env.SECRET_KEY_SHEET;
       const currentDate = formatDateForSheet();
-
+      const finalScore = Math.round(getScore() * 10);
+ 
       const payload = {
         fname: formDataLogin.fname,
         lname: formDataLogin.lname,
         id: formDataLogin.id,
         phone: formDataLogin.phone,
         mail: formDataLogin.email,
-        score: `${score * 10}%`,
+        score: `${finalScore}%`,
         date: currentDate
       }
 
@@ -201,21 +193,21 @@ export default function Home() {
           <div className="text-center mb-8">
 
             <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-white rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-            
+
               <img
                 src="https://abiudea.org/wp-content/uploads/2023/07/LOGO-ABIUDEA.png"
                 alt="Logo ABIUDEA"
                 className="mx-auto mb-4 w-24 h-24 object-contain "
 
               />
-           
+
               {/* <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg> */}
             </div>
             <div className="flex flex-col">
               <span className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
-                Certificación de Inducción 
+                Certificación de Inducción
               </span>
               <span className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
                 ABIUDEA
@@ -243,6 +235,8 @@ export default function Home() {
   }
 
 
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center p-4">
       <Head>
@@ -259,6 +253,7 @@ export default function Home() {
               <span className="hidden lg:block text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
                 Participante: {`${formDataLogin.fname.split(" ")[0]} ${formDataLogin.lname}`}
               </span>
+              {score}
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
               <div
