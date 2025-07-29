@@ -7,7 +7,7 @@ import { useEffect } from "react";
 
 const Page = () => {
   const router = useRouter()
-  const { getTotalQuestions, isApproved: getApproved, showResults, resetQuiz, getScore, getPercentage } = useQuizStore();
+  const { getTotalQuestions, isApproved: getApproved, showResults, restartQuiz, resetQuiz, getScore, getPercentage } = useQuizStore();
   const { getUsername, resetFormDataLogin } = useUserStore()
 
   const isApproved = getApproved()
@@ -24,6 +24,11 @@ const Page = () => {
   }, [showResults, router]);
 
   const handleResetQuiz = () => {
+    restartQuiz();
+    router.push('/')
+  }
+
+  const handleLogout = () => {
     resetQuiz();
     resetFormDataLogin();
     router.push('/')
@@ -37,7 +42,7 @@ const Page = () => {
 
       {isApproved && showResults && (
         <div className="flex flex-col items-center justify-center w-full ">
-            <CertificatePreview name={userName} onHandleLogout={handleResetQuiz} />
+          <CertificatePreview name={userName} onHandleLogout={handleLogout} />
         </div>
 
 

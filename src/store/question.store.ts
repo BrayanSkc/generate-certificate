@@ -34,6 +34,7 @@ type QuizStore = {
   answerQuestion: (selectedIndex: number) => void;
   nextQuestion: () => void;
   resetQuiz: () => void;
+  restartQuiz: () => void;
   getScore: () => number;
   getTotalQuestions: () => number;
   getPercentage: () => number;
@@ -121,6 +122,15 @@ export const useQuizStore = create<QuizStore>()(
           currentQuestionIndex: 0,
           showResults: false,
           showNameInput: true,
+          isGeneratingPDF: false,
+        }),
+
+        
+      restartQuiz: () =>
+        set({
+          answers: [],
+          currentQuestionIndex: 0,
+          showResults: false,
           isGeneratingPDF: false,
         }),
 
