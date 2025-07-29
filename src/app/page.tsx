@@ -10,11 +10,11 @@ import { useQuizStore } from '@/store/question.store';
 
 
 const initialValuesFormData: InUserLoginProps = {
-  fname: "Jhon Doe",
-  lname: "Doe Doe",
-  id: "11223334444",
-  phone: "3006007890",
-  email: "jhon.doe@example.com"
+  fname: "",
+  lname: "",
+  id: "",
+  phone: "",
+  email: ""
 };
 
 export default function Home() {
