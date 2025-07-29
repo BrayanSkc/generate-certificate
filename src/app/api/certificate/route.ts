@@ -19,9 +19,6 @@ export async function POST(req: Request) {
 
     const isDev = process.env.NODE_ENV === 'development' && !isVercel;
 
-    const puppeteerLib = isDev ? await import('puppeteer') : await import('puppeteer-core');
-
-
     let browser: Awaited<ReturnType<typeof puppeteer.launch>>;
     if (isDev) {
       // Use full puppeteer locally

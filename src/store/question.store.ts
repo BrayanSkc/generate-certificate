@@ -209,12 +209,12 @@ export const useQuizStore = create<QuizStore>()(
       // Versión para manejar migraciones si cambias la estructura
       version: 1,
       // Función para migrar datos de versiones anteriores (opcional)
-      migrate: (persistedState: any, version: number) => {
+      migrate: (persistedState: unknown, version: number) => {
         if (version === 0) {
-          // Migrar de la versión 0 a la 1
+          // Migrate from version 0 to version 1
           return {
-            ...persistedState,
-            // Agregar nuevos campos con valores por defecto
+            ...(persistedState as Record<string, unknown>),
+            // Add new fields with default values here if needed
           };
         }
         return persistedState as QuizStore;
