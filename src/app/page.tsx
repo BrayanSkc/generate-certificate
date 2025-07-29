@@ -1,11 +1,15 @@
 "use client"
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { FormLogin } from '@/components/formLogin/FormLogin';
 import { InUserLoginProps } from '@/types/InFormLogin';
 import { formatDateForSheet, validateFormData } from '@/utils/function';
 import { useQuizStore } from '@/store/question.store';
+import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/store/user.store';
+
+
 
 
 
@@ -18,36 +22,42 @@ const initialValuesFormData: InUserLoginProps = {
 };
 
 export default function Home() {
-
+  const router = useRouter();
   const {
     hasHydrated,
-    isGeneratingPDF,
     answerQuestion,
-    resetQuiz,
     nextQuestion,
     getCurrentQuestion,
     getScore,
     getTotalQuestions,
-    getPercentage,
-    isApproved: getApproved,
     currentQuestionIndex,
     isLastQuestion,
-    showResults,
     setShowResults,
     setShowNameInput,
     showNameInput,
+    showResults,
     setIsGeneratingPDF,
   } = useQuizStore();
+
+const {formDataLogin, setFormDataLogin}=  useUserStore()
 
   const currentQuestion = getCurrentQuestion();
   const score = getScore();
   const totalQuestions = getTotalQuestions();
-  const percentage = getPercentage();
-  const isApproved = getApproved();
 
 
-  const [formDataLogin, setFormDataLogin] = useState<InUserLoginProps>(initialValuesFormData)
   const [isLoading, setIsLoading] = useState(false)
+
+
+ useEffect(() => {
+    if (showResults) {
+      // Espera un ciclo de evento antes de redirigir
+      setTimeout(() => {
+        router.push('/certificado');
+      }, 0);
+    }
+  }, [showResults]);
+
 
   const handleNameSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -69,7 +79,7 @@ export default function Home() {
       nextQuestion();
     } else {
       await sendResultsToGoogleSheet()
-      setShowResults(true)
+      goToCertificate()
 
     }
   };
@@ -115,6 +125,9 @@ export default function Home() {
   };
 
 
+  const goToCertificate = () => {
+    router.push(`/certificado`);
+  };
 
 
 
@@ -158,12 +171,6 @@ export default function Home() {
     } finally {
       setIsGeneratingPDF(false);
     }
-  };
-
-
-  const handleRestartQuiz = () => {
-    resetQuiz();
-    setFormDataLogin(initialValuesFormData);
   };
 
 
@@ -224,156 +231,6 @@ export default function Home() {
     );
   }
 
-  if (showResults) {
-    // const percentage = Math.round((score / questions.length) * 100);
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center p-4">
-        <Head>
-          <title>Resultados - Quiz de Inducción</title>
-        </Head>
-
-        <div className="w-full max-w-2xl">
-          <div className="backdrop-blur-lg bg-white/70 rounded-3xl shadow-2xl border border-white/20 p-8">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className={`w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg ${isApproved
-                ? 'bg-gradient-to-br from-green-400 to-emerald-500'
-                : 'bg-gradient-to-br from-red-400 to-pink-500'
-                }`}>
-                {isApproved ? (
-                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                ) : (
-                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                )}
-              </div>
-              <h1 className="text-4xl font-bold text-gray-800 mb-2">¡Quiz Completado!</h1>
-              <p className="text-xl text-green-600 font-semibold">Hola, {userName}</p>
-            </div>
-
-            {/* Score Card */}
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 mb-8 border border-green-200">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Tu Puntuación</h2>
-                <div className="flex items-center justify-center space-x-4 mb-4">
-                  <div className="text-6xl font-bold text-green-600">
-                    {score}
-                  </div>
-                  <div className="text-4xl text-gray-400">/</div>
-                  <div className="text-4xl font-bold text-gray-600">
-                    {totalQuestions}
-                  </div>
-                </div>
-
-                {/* Circular Progress */}
-                <div className="relative w-32 h-32 mx-auto mb-4">
-                  <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      stroke="#e5e7eb"
-                      strokeWidth="8"
-                      fill="none"
-                    />
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      stroke="#10b981"
-                      strokeWidth="8"
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 50}`}
-                      strokeDashoffset={`${2 * Math.PI * 50 * (1 - percentage / 100)}`}
-                      className="transition-all duration-1000 ease-out"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-green-600">{percentage}%</span>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Result Message */}
-            {isApproved ? (
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-r-2xl p-6 mb-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-lg font-semibold text-green-800">¡Felicitaciones! Has aprobado el quiz.</p>
-                    <p className="text-green-700">Puedes descargar tu certificado de participación.</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 rounded-r-2xl p-6 mb-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-lg font-semibold text-red-800">Necesitas al menos 7 respuestas correctas para obtener el certificado.</p>
-                    <p className="text-red-700">¡No te preocupes! Puedes intentarlo de nuevo.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              {isApproved && (
-                <button
-                  onClick={generateCertificate}
-                  disabled={isGeneratingPDF}
-                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2"
-                >
-                  {isGeneratingPDF ? (
-                    <>
-                      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span>Generando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span>Descargar Certificado</span>
-                    </>
-                  )}
-                </button>
-              )}
-
-              <button
-                onClick={handleRestartQuiz}
-                className="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Reiniciar Quiz</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Pantalla de preguntas
   if (!currentQuestion) {
     return <div>Cargando pregunta...</div>;
@@ -392,8 +249,8 @@ export default function Home() {
           {/* Progress Bar */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-semibold text-gray-600">Pregunta {currentQuestionIndex + 1} de {totalQuestions}</span>
-              <span className="text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
+              <span className="text-xs md:text-sm font-semibold text-gray-600">Pregunta {currentQuestionIndex + 1} de {totalQuestions}</span>
+              <span className="hidden lg:block text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
                 Participante: {`${formDataLogin.fname.split(" ")[0]} ${formDataLogin.lname}`}
               </span>
             </div>
@@ -405,14 +262,14 @@ export default function Home() {
             </div>
             <div className="flex justify-between mt-2">
               <span className="text-xs text-gray-500">Inicio</span>
-              <span className="text-xs text-gray-500">{Math.round(((currentQuestionIndex) / totalQuestions) * 100)}% completado</span>
+              <span className="hidden md:block text-xs text-gray-500">{Math.round(((currentQuestionIndex) / totalQuestions) * 100)}% completado</span>
               <span className="text-xs text-gray-500">Final</span>
             </div>
           </div>
 
           {/* Question */}
           <div className="mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 leading-relaxed text-center">
+            <h2 className="text-lg lg:text-2xl md:text-3xl font-bold text-gray-800 leading-relaxed text-center">
               {currentQuestion.question}
             </h2>
           </div>
@@ -431,7 +288,7 @@ export default function Home() {
                     </span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-gray-800 font-medium text-sm leading-6 group-hover:text-gray-900 transition-colors duration-300">
+                    <p className="text-xs md:text-sm text-gray-800 font-medium  leading-6 group-hover:text-gray-900 transition-colors duration-300">
                       {option}
                     </p>
                   </div>
@@ -447,7 +304,7 @@ export default function Home() {
 
           {/* Helper Text */}
           <div className="mt-8 text-center">
-            <p className="text-sm text-gray-500">
+            <p className="text-xs md:text-sm text-gray-500">
               Selecciona la respuesta que consideres correcta para continuar
             </p>
           </div>

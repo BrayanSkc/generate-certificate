@@ -50,3 +50,14 @@ export const formatDateForSheet = () => {
   // Obtenemos "28/07/2025 18:48" como una sola string
   return formatter.format(date).replace(',', '');
 };
+
+
+export function extractStyleAndBody(html: string) {
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+
+  const styles = styleMatch ? styleMatch[0] : "";
+  const body = bodyMatch ? bodyMatch[1] : "";
+
+  return `${styles}${body}`;
+}
