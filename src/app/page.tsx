@@ -1,53 +1,53 @@
 "use client"
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Head from 'next/head';
 import { FormLogin } from '@/components/formLogin/FormLogin';
 import { InUserLoginProps } from '@/types/InFormLogin';
-import { validateFormData } from '@/utils/function';
+import { formatDateForSheet, validateFormData } from '@/utils/function';
 import { useQuizStore } from '@/store/question.store';
 
+
+
 const initialValuesFormData: InUserLoginProps = {
-  fname: "",
-  lname: "",
-  id: "",
-  phone: "",
-  email: ""
+  fname: "Jhon Doe",
+  lname: "Doe Doe",
+  id: "11223334444",
+  phone: "3006007890",
+  email: "jhon.doe@example.com"
 };
 
 export default function Home() {
-  // Estado local para el formulario
-  const [formDataLogin, setFormDataLogin] = useState<InUserLoginProps>(initialValuesFormData);
 
-  // Estado de Zustand
   const {
-    // Estado
-    currentQuestionIndex,
-    showResults,
-    showNameInput,
+    hasHydrated,
     isGeneratingPDF,
-    
-    // Acciones
     answerQuestion,
-    nextQuestion,
     resetQuiz,
-    setShowNameInput,
-    setIsGeneratingPDF,
-    
-    // Getters
+    nextQuestion,
     getCurrentQuestion,
     getScore,
     getTotalQuestions,
     getPercentage,
-    isApproved,
+    isApproved: getApproved,
+    currentQuestionIndex,
     isLastQuestion,
+    showResults,
+    setShowResults,
+    setShowNameInput,
+    showNameInput,
+    setIsGeneratingPDF,
   } = useQuizStore();
 
   const currentQuestion = getCurrentQuestion();
   const score = getScore();
   const totalQuestions = getTotalQuestions();
   const percentage = getPercentage();
-  const approved = isApproved();
+  const isApproved = getApproved();
+
+
+  const [formDataLogin, setFormDataLogin] = useState<InUserLoginProps>(initialValuesFormData)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleNameSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -58,20 +58,69 @@ export default function Home() {
       alert(result.message);
       return;
     }
-    setShowNameInput(false);
+    setShowNameInput(false)
   };
 
-  const handleAnswer = (selectedOption: number) => {
-    // Guardar la respuesta en Zustand
+
+  const handleAnswer = async (selectedOption: number) => {
+
     answerQuestion(selectedOption);
-    
-    // Avanzar a la siguiente pregunta o mostrar resultados
-    nextQuestion();
+    if (!isLastQuestion()) {
+      nextQuestion();
+    } else {
+      await sendResultsToGoogleSheet()
+      setShowResults(true)
+
+    }
   };
+
+
+  const userName = useMemo(() => {
+    const fname = formDataLogin.fname?.trim().split(" ")[0] || "";
+    const lname = formDataLogin.lname?.trim().length > 20 ? formDataLogin.lname?.trim().split(" ")[0] : formDataLogin.lname?.trim();
+    return [fname, lname].filter(Boolean).join(" ");
+  }, [formDataLogin.fname, formDataLogin.lname]);
+
+
+
+  const sendResultsToGoogleSheet = async () => {
+    if (isLoading || !formDataLogin.lname) return
+    try {
+      setIsLoading(true)
+      const secret = process.env.SECRET_KEY_SHEET;
+      const currentDate = formatDateForSheet();
+
+      const payload = {
+        fname: formDataLogin.fname,
+        lname: formDataLogin.lname,
+        id: formDataLogin.id,
+        phone: formDataLogin.phone,
+        mail: formDataLogin.email,
+        score: `${score * 10}%`,
+        date: currentDate
+      }
+
+      await fetch('/api/send-to-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, secret }),
+      });
+      console.log('✅ Resultados enviados a Google Sheets correctamente');
+      setIsLoading(false)
+
+    } catch (error) {
+      console.error('❌ Error al enviar a Google Sheets:', error);
+      setIsLoading(false)
+    }
+  };
+
+
+
+
 
   const generateCertificate = async () => {
-    if (score < 3) {
-      alert('Necesitas al menos 3 respuestas correctas para obtener el certificado.');
+    if (score < 7) {
+      alert('Necesitas al menos 7 respuestas correctas para obtener el certificado.');
       return;
     }
 
@@ -84,7 +133,7 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: `${formDataLogin.fname} ${formDataLogin.lname}`,
+          name: userName,
           score: score,
           totalQuestions: totalQuestions
         }),
@@ -96,7 +145,7 @@ export default function Home() {
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = `certificado-${formDataLogin.fname}-${formDataLogin.lname}.pdf`;
+        a.download = `certificado-${userName.replace(/\s+/g, '-')}.pdf`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -111,12 +160,26 @@ export default function Home() {
     }
   };
 
+
   const handleRestartQuiz = () => {
     resetQuiz();
     setFormDataLogin(initialValuesFormData);
   };
 
-  // Pantalla de ingreso de datos
+
+  if (!hasHydrated || isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-white">
+        <div className="flex space-x-2">
+          <span className="w-4 h-4 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 animate-bounce [animation-delay:-0.3s]" />
+          <span className="w-4 h-4 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 animate-bounce [animation-delay:-0.15s]" />
+          <span className="w-4 h-4 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 animate-bounce" />
+        </div>
+      </div>
+    );
+  }
+
+
   if (showNameInput) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center p-4">
@@ -126,8 +189,18 @@ export default function Home() {
         </Head>
 
         <div className="w-full max-w-md">
+          {/* Logo/Icon placeholder */}
           <div className="text-center mb-8">
+
             <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+              {/*
+              <img
+                src="https://abiudea.org/wp-content/uploads/2023/07/LOGO-ABIUDEA.png"
+                alt="Logo ABIUDEA"
+                className="mx-auto mb-4 w-24 h-24 object-contain "
+
+              />
+              */}
               <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
@@ -135,8 +208,12 @@ export default function Home() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
               Quiz de Inducción
             </h1>
+
+
+
           </div>
 
+          {/* Card with glassmorphism effect */}
           <FormLogin
             formData={formDataLogin}
             setFormData={setFormDataLogin}
@@ -147,8 +224,9 @@ export default function Home() {
     );
   }
 
-  // Pantalla de resultados
   if (showResults) {
+    // const percentage = Math.round((score / questions.length) * 100);
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center p-4">
         <Head>
@@ -159,11 +237,11 @@ export default function Home() {
           <div className="backdrop-blur-lg bg-white/70 rounded-3xl shadow-2xl border border-white/20 p-8">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className={`w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg ${approved
+              <div className={`w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg ${isApproved
                 ? 'bg-gradient-to-br from-green-400 to-emerald-500'
                 : 'bg-gradient-to-br from-red-400 to-pink-500'
                 }`}>
-                {approved ? (
+                {isApproved ? (
                   <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -174,9 +252,7 @@ export default function Home() {
                 )}
               </div>
               <h1 className="text-4xl font-bold text-gray-800 mb-2">¡Quiz Completado!</h1>
-              <p className="text-xl text-green-600 font-semibold">
-                Hola, {formDataLogin.fname} {formDataLogin.lname}
-              </p>
+              <p className="text-xl text-green-600 font-semibold">Hola, {userName}</p>
             </div>
 
             {/* Score Card */}
@@ -220,11 +296,12 @@ export default function Home() {
                     <span className="text-2xl font-bold text-green-600">{percentage}%</span>
                   </div>
                 </div>
+
               </div>
             </div>
 
             {/* Result Message */}
-            {approved ? (
+            {isApproved ? (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-r-2xl p-6 mb-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -247,7 +324,7 @@ export default function Home() {
                     </svg>
                   </div>
                   <div className="ml-4">
-                    <p className="text-lg font-semibold text-red-800">Necesitas al menos 3 respuestas correctas para obtener el certificado.</p>
+                    <p className="text-lg font-semibold text-red-800">Necesitas al menos 7 respuestas correctas para obtener el certificado.</p>
                     <p className="text-red-700">¡No te preocupes! Puedes intentarlo de nuevo.</p>
                   </div>
                 </div>
@@ -256,7 +333,7 @@ export default function Home() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              {approved && (
+              {isApproved && (
                 <button
                   onClick={generateCertificate}
                   disabled={isGeneratingPDF}
@@ -302,10 +379,12 @@ export default function Home() {
     return <div>Cargando pregunta...</div>;
   }
 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center p-4">
       <Head>
         <title>Quiz de Inducción - Pregunta {currentQuestionIndex + 1}</title>
+        <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <div className="w-full max-w-4xl">
@@ -313,24 +392,20 @@ export default function Home() {
           {/* Progress Bar */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-semibold text-gray-600">
-                Pregunta {currentQuestionIndex + 1} de {totalQuestions}
-              </span>
+              <span className="text-sm font-semibold text-gray-600">Pregunta {currentQuestionIndex + 1} de {totalQuestions}</span>
               <span className="text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
-                Participante: {formDataLogin.fname} {formDataLogin.lname}
+                Participante: {`${formDataLogin.fname.split(" ")[0]} ${formDataLogin.lname}`}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500 ease-out shadow-sm"
-                style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }}
+                style={{ width: `${((currentQuestionIndex) / totalQuestions) * 100}%` }}
               ></div>
             </div>
             <div className="flex justify-between mt-2">
               <span className="text-xs text-gray-500">Inicio</span>
-              <span className="text-xs text-gray-500">
-                {Math.round(((currentQuestionIndex + 1) / totalQuestions) * 100)}% completado
-              </span>
+              <span className="text-xs text-gray-500">{Math.round(((currentQuestionIndex) / totalQuestions) * 100)}% completado</span>
               <span className="text-xs text-gray-500">Final</span>
             </div>
           </div>
@@ -341,7 +416,6 @@ export default function Home() {
               {currentQuestion.question}
             </h2>
           </div>
-
           {/* Options */}
           <div className="grid gap-4 md:gap-6">
             {currentQuestion.options.map((option, index) => (

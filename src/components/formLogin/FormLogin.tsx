@@ -1,6 +1,7 @@
+"use client"
+import React from 'react';
 import { ITEMS_FORMS_LOGIN } from '@/constants/form/login';
 import { InUserLoginProps } from '@/types/InFormLogin';
-import React from 'react';
 
 interface InFormLoginProps {
   formData: InUserLoginProps;
