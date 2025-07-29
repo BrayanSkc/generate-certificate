@@ -37,10 +37,6 @@ const Page = () => {
 
       {isApproved && showResults && (
         <div className="flex flex-col items-center justify-center w-full ">
-
- 
-
-
             <CertificatePreview name={userName} onHandleLogout={handleResetQuiz} />
         </div>
 

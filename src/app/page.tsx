@@ -79,6 +79,7 @@ const {formDataLogin, setFormDataLogin}=  useUserStore()
       nextQuestion();
     } else {
       await sendResultsToGoogleSheet()
+      setShowResults(true)
       goToCertificate()
 
     }
