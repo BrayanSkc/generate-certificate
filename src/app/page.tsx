@@ -253,7 +253,6 @@ export default function Home() {
               <span className="hidden lg:block text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
                 Participante: {`${formDataLogin.fname.split(" ")[0]} ${formDataLogin.lname}`}
               </span>
-              {score}
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
               <div
