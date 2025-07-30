@@ -24,7 +24,6 @@ const CertificatePreview: React.FC<InCertificatePreviewProps> = ({ name, onHandl
 
   const handleDownload = async () => {
 
-    console.log("Entre a descarga")
     if (!certificateRef.current) return;
 
     const html2pdf = (await import("html2pdf.js")).default;
